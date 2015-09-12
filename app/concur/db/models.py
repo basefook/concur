@@ -3,6 +3,8 @@ import sqlalchemy as sa
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
+from concur.collections import enum
+
 from .types import (
     INTEGER,
     BOOLEAN,
@@ -10,6 +12,7 @@ from .types import (
     TEXT,
     TSVECTOR,
     UTC_TIMESTAMP,
+    OAUTH_TOKEN,
 )
 
 
@@ -84,3 +87,27 @@ class Vote(Base, Entity):
     def __init__(self, voter, *args, **kwargs):
         super(Vote, self).__init__(*args, **kwargs)
         self.voter = voter
+
+
+class Grant(Base):
+    __tablename__ = 'grants'
+
+    TYPES = enum('PASSWORD')
+
+    access_token = sa.Column(OAUTH_TOKEN, primary_key=True)
+    refresh_token = sa.Column(OAUTH_TOKEN)
+    grant_type = sa.Column(TEXT(16), nullable=False, index=True)
+    user_id = sa.Column(PUBLIC_ID, ForeignKey(User.id), index=True)
+    expires_at = sa.Column(UTC_TIMESTAMP, nullable=False)
+    user_agent = sa.Column(TEXT)
+    ip_addr = sa.Column(TEXT)
+
+    @classmethod
+    def new_password_grant(cls, user_public_id, user_agent, ip_addr):
+        grant = cls(grant_type=cls.TYPES.PASSWORD,
+                    user_public_id=user_public_id,
+                    user_agent=user_agent,
+                    ip_addr=ip_addr)
+        grant.expires_at = grant.created_at + timedelta(days=60)
+        return grant
+
