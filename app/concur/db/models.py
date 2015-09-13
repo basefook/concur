@@ -120,6 +120,7 @@ class Option(Entity, Base):
 
     def __json__(self, request=None):
         return {
+            'id': self.id,
             'text': self.text,
             'tally': self.tally,
         }
@@ -129,14 +130,26 @@ class Vote(Entity, Base):
     __tablename__ = 'votes'
 
     user_id = sa.Column(PUBLIC_ID, sa.ForeignKey(User.id), primary_key=True)
-    option_id = sa.Column(PUBLIC_ID, primary_key=True)
-    is_public = sa.Column(BOOLEAN, default=False)
+    option_id = sa.Column(PUBLIC_ID, sa.ForeignKey(Option.id), primary_key=True)
 
     voter = relationship(User, backref='votes')
+    option = relationship(Option)
 
-    def __init__(self, voter, *args, **kwargs):
+    def __init__(self, voter, option, *args, **kwargs):
         super(Vote, self).__init__(*args, **kwargs)
         self.voter = voter
+        self.option_id = option.id
+        self.option = option
+
+    def __json__(self, request=None):
+        return {
+            'id': self.id,
+            'created_at': self.created_at,
+            'option': self.option,
+            'poll': {
+                'id': self.option.poll_id,
+            }
+        }
 
 
 class Grant(Entity, Base):

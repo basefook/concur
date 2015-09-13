@@ -46,10 +46,18 @@ def app(settings_path):
 
 
 @pytest.yield_fixture(scope='function')
+def app_db_session(app):
+    db_session = app.registry.DB_Session()
+    yield db_session
+    transaction.abort()
+
+
+@pytest.yield_fixture(scope='function')
 def db_session(app):
     db_session = quick_sessionmaker()()
     yield db_session
-    transaction.abort()
+    db_session.rollback()
+    db_session.close()
 
 
 @pytest.fixture(scope='function')
@@ -61,23 +69,17 @@ def session_factory(app, db_session):
 def test_context(request):
     with scoped_session(quick_sessionmaker()) as db_session:
         email = ''.join(choice(letters) for i in range(10)) + '@test.com'
-        user = User(email=email, password='test')
 
-        # use a fixed id, since this would otherwise change in each test function.
-        user.id = user_id = PUBLIC_ID.next_id()
-        db_session.add(user)
+        # use a fixed user id, since this would
+        # otherwise change in each test function.
+        user = User(email=email, password='test')
+        user.id = PUBLIC_ID.next_id()
 
         grant = Grant.new_password_grant(user, 'user-agent', '0.0.0.0')
+
+        db_session.add(user)
         db_session.add(grant)
 
-        grant_id = grant.id
-
-        def delete_user():
-            with scoped_session(quick_sessionmaker()) as db_session:
-                db_session.query(Grant).filter_by(id=grant_id).delete()
-                db_session.query(User).filter_by(id=user_id).delete()
-
-        request.addfinalizer(delete_user)
         return {
             'user': user.__json__(),
             'grant': grant.__json__(),

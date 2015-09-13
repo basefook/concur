@@ -34,3 +34,11 @@ def create_poll(app, access_token, prompt, options):
     }, headers={
         'authorization': 'Bearer {}'.format(access_token)
     })
+
+
+def cast_vote(app, access_token, option_id):
+    return app.post_json('/votes', {
+        'option_id': option_id,
+    }, headers={
+        'authorization': 'Bearer {}'.format(access_token)
+    })

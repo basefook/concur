@@ -1,6 +1,7 @@
+import sqlalchemy as sa
+
 from concur.lib.view import View, view_config, view_defaults, json_body
-from concur.renderer import json_renderer
-from concur.contexts import UserContext, PollContext, OptionContext, GrantContext
+from concur.contexts import UserContext, PollContext, OptionContext, GrantContext, VoteContext
 from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant
 from concur.db.types import UTC_TIMESTAMP
 from concur.constants import SUCCESS
@@ -117,14 +118,18 @@ class VotesAPI(View):
     @view_config(request_method='POST')
     @json_body(schemas.Vote, role='creator')
     def cast_vote(self):
-        option_id = self.req.matchdict['option_id']
-        old_vote = self.db.query(Vote)\
-            .filter(Vote.user_id == self.req.session.user.id,
-                    Vote.option_id == option_id)\
+        option_id = self.req.json['option_id']
+        voter = self.req.session.user
+        data = self.db.query(Option, Vote)\
+            .filter(Option.id == option_id)\
+            .outerjoin(Vote, sa.and_(Vote.option_id == Option.id,
+                                     Vote.user_id == voter.id))\
             .first()
+        if not data:
+            raise Exception('poll not found')
+        option, old_vote = data
         if (not old_vote) or (old_vote.option_id != option_id):
-            new_vote = Vote(self.req.session.user,
-                            option_id=option_id)
+            new_vote = Vote(voter, option)
             self.db.add(new_vote)
             return new_vote
         else:
@@ -134,23 +139,3 @@ class VotesAPI(View):
 @view_defaults(route_name='vote')
 class VoteAPI(View):
     pass
-
-
-def includeme(config):
-    routes = [
-        ('grants', '/grants', None),
-        ('grant', '/grants/{grant_id:.+}', GrantContext),
-        ('users', '/users', None),
-        ('user', '/users/{user_id:.+}', UserContext),
-        ('polls', '/polls', None),
-        ('poll', '/polls/{poll_id:.+}', PollContext),
-        ('options', '/polls/{poll_id:.+}/options', None),
-        ('option', '/polls/{poll_id:.+}/options/{option_id:.+}', OptionContext),
-        ('votes', '/votes', None),
-        ('vote', '/votes/{vote_id:.+}', None),
-    ]
-
-    for name, pattern, root_factory in routes:
-        config.add_route(name, pattern, factory=root_factory)
-
-    config.add_renderer('json', json_renderer())
