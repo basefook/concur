@@ -1,9 +1,39 @@
 from concur.lib.view import View, view_config, view_defaults, json_body
 from concur.renderer import json_renderer
-from concur.db.models import User, Poll, Option, Vote
-from concur.contexts import UserContext, PollContext, OptionContext
+from concur.contexts import UserContext, PollContext, OptionContext, GrantContext
+from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant
+from concur.db.types import UTC_TIMESTAMP
 from concur.constants import SUCCESS
 from concur import schemas
+
+
+@view_defaults(route_name='grants')
+class GrantsAPI(View):
+
+    @view_config(request_method='POST')
+    def login(self):
+        if self.req.json['type'].upper() == Grant.TYPES.PASSWORD:
+            return self.login_with_password_grant()
+
+    def login_with_password_grant(self):
+        user = self.db.query(User)\
+            .filter_by(email=self.req.json['email'])\
+            .first()
+        if not user:
+            raise Exception('user not found')
+        if not user.verify_password(self.req.json['password']):
+            raise Exception('invalid email or password')
+        self.req.session.remember(user)
+        return self.req.session.grant
+
+
+@view_defaults(route_name='grant')
+class GrantAPI(View):
+
+    @view_config(request_method='DELETE')
+    def logout(self):
+        self.ctx.grant.deleted_at = UTC_TIMESTAMP.now()
+        return SUCCESS
 
 
 @view_defaults(route_name='users')
@@ -14,17 +44,24 @@ class UsersAPI(View):
     def signup(self):
         user = User(email=self.req.json['email'],
                     password=self.req.json['password'])
+        # users belong to their own group.
+        group_membership = GroupMembership(user, group_id=user.group_id)
         self.db.add(user)
+        self.db.add(group_membership)
         return user
 
 
-@view_defaults(route_name='users', context=UserContext)
+@view_defaults(route_name='user')
 class UserAPI(View):
 
     @view_config(request_method='GET')
-    @json_body(schemas.User)
     def get_user(self):
         return self.ctx.user
+
+    @view_config(request_method='DELETE')
+    def delete_user(self):
+        self.ctx.user.deleted_at = UTC_TIMESTAMP.now()
+        return SUCCESS
 
 
 @view_defaults(route_name='polls')
@@ -43,7 +80,7 @@ class PollsAPI(View):
         return poll
 
 
-@view_defaults(route_name='poll', context=PollContext)
+@view_defaults(route_name='poll')
 class PollAPI(View):
 
     @view_config(request_method='GET')
@@ -52,7 +89,7 @@ class PollAPI(View):
         return self.ctx.poll
 
 
-@view_defaults(route_name='options', context=PollContext)
+@view_defaults(route_name='options')
 class OptionsAPI(View):
 
     @view_config(request_method='POST')
@@ -64,13 +101,13 @@ class OptionsAPI(View):
         return option
 
 
-@view_defaults(route_name='option', context=OptionContext)
+@view_defaults(route_name='option')
 class OptionAPI(View):
 
     @view_config(request_method='DELETE')
     @json_body(schemas.Poll)
     def delete_option(self):
-        self.ctx.option.is_deleted = True
+        self.ctx.option.deleted_at = UTC_TIMESTAMP.now()
         return SUCCESS
 
 
@@ -101,17 +138,19 @@ class VoteAPI(View):
 
 def includeme(config):
     routes = [
-        ('users',           '/users'),
-        ('user',            '/users/{user_id:.+}'),
-        ('polls',           '/polls'),
-        ('poll',            '/polls/{poll_id:.+}'),
-        ('options',         '/polls/{poll_id:.+}/options'),
-        ('option',          '/polls/{poll_id:.+}/options/{option_id:.+}'),
-        ('votes',           '/votes'),
-        ('vote',            '/votes/{vote_id:.+}'),
+        ('grants', '/grants', None),
+        ('grant', '/grants/{grant_id:.+}', GrantContext),
+        ('users', '/users', None),
+        ('user', '/users/{user_id:.+}', UserContext),
+        ('polls', '/polls', None),
+        ('poll', '/polls/{poll_id:.+}', PollContext),
+        ('options', '/polls/{poll_id:.+}/options', None),
+        ('option', '/polls/{poll_id:.+}/options/{option_id:.+}', OptionContext),
+        ('votes', '/votes', None),
+        ('vote', '/votes/{vote_id:.+}', None),
     ]
 
-    for name, pattern in routes:
-        config.add_route(name, pattern)
+    for name, pattern, root_factory in routes:
+        config.add_route(name, pattern, factory=root_factory)
 
     config.add_renderer('json', json_renderer())

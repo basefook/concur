@@ -8,12 +8,12 @@ from jsonschema import (
 class View(object):
     def __init__(self, context, request):
         self.req = request
-        self.ctx = context
         self.db = request.db
+        self.ctx = context
 
 
-def view_defaults(*args, **kwargs):
-    return _view_defaults(renderer='json', *args, **kwargs)
+def view_defaults(context=None, *args, **kwargs):
+    return _view_defaults(renderer='json', context=context, *args, **kwargs)
 
 
 class json_body(object):

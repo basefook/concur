@@ -21,7 +21,7 @@ def add_db_session_request_method(config, engine, use_tm=True):
         # add sqlalchemy session to active transaction
         register(config.registry.DB_Session)
 
-    def dbs(request):
+    def db(request):
         return config.registry.DB_Session()
 
-    config.add_request_method(dbs, reify=True)
+    config.add_request_method(db, reify=True)

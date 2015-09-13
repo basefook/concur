@@ -120,9 +120,9 @@ class PUBLIC_ID(UUID):
 
     @classmethod
     def next_id(cls):
-        return random()
+        return cls.random()
 
 
 
 # only export sqlalchemy column types
-__all__ = [k for k in locals() if not k.startswith('_')]
+__all__ = [k for k in locals() if not k.startswith('_') and k.isupper()]
