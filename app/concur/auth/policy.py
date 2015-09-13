@@ -35,7 +35,7 @@ class SessionAuthenticationPolicy(CallbackAuthenticationPolicy):
         request userid exists.
         """
         user = request.session.user
-        return user.public_id if user else None
+        return user.id if user else None
 
     @classmethod
     def groups(cls, user_id, request):

@@ -12,7 +12,7 @@ from paste.deploy import appconfig, loadapp
 from webtest import TestApp
 
 from concur.auth.session import SessionFactory
-from concur.db.models import User
+from concur.db.models import User, Grant
 from concur.db.types import PUBLIC_ID
 from concur.db.util import scoped_session, quick_sessionmaker
 
@@ -47,7 +47,7 @@ def app(settings_path):
 
 @pytest.yield_fixture(scope='function')
 def db_session(app):
-    db_session = app.registry.DB_Session()
+    db_session = quick_sessionmaker()()
     yield db_session
     transaction.abort()
 
@@ -57,8 +57,8 @@ def session_factory(app, db_session):
     return SessionFactory()
 
 
-@pytest.fixture(scope='function')
-def test_user_id(request):
+@pytest.fixture(scope='module')
+def test_context(request):
     with scoped_session(quick_sessionmaker()) as db_session:
         email = ''.join(choice(letters) for i in range(10)) + '@test.com'
         user = User(email=email, password='test')
@@ -67,12 +67,21 @@ def test_user_id(request):
         user.id = user_id = PUBLIC_ID.next_id()
         db_session.add(user)
 
+        grant = Grant.new_password_grant(user, 'user-agent', '0.0.0.0')
+        db_session.add(grant)
+
+        grant_id = grant.id
+
         def delete_user():
             with scoped_session(quick_sessionmaker()) as db_session:
+                db_session.query(Grant).filter_by(id=grant_id).delete()
                 db_session.query(User).filter_by(id=user_id).delete()
 
         request.addfinalizer(delete_user)
-        return user.id
+        return {
+            'user': user.__json__(),
+            'grant': grant.__json__(),
+        }
 
 
 @pytest.fixture(scope='function')

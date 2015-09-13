@@ -4,6 +4,7 @@ from concur.contexts import UserContext, PollContext, OptionContext, GrantContex
 from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant
 from concur.db.types import UTC_TIMESTAMP
 from concur.constants import SUCCESS
+from concur.auth.constants import PERMISSIONS
 from concur import schemas
 
 
@@ -30,7 +31,7 @@ class GrantsAPI(View):
 @view_defaults(route_name='grant')
 class GrantAPI(View):
 
-    @view_config(request_method='DELETE')
+    @view_config(request_method='DELETE', permission=PERMISSIONS.DELETE)
     def logout(self):
         self.ctx.grant.deleted_at = UTC_TIMESTAMP.now()
         return SUCCESS
@@ -54,11 +55,11 @@ class UsersAPI(View):
 @view_defaults(route_name='user')
 class UserAPI(View):
 
-    @view_config(request_method='GET')
+    @view_config(request_method='GET', permission=PERMISSIONS.READ)
     def get_user(self):
         return self.ctx.user
 
-    @view_config(request_method='DELETE')
+    @view_config(request_method='DELETE', permission=PERMISSIONS.DELETE)
     def delete_user(self):
         self.ctx.user.deleted_at = UTC_TIMESTAMP.now()
         return SUCCESS
@@ -83,8 +84,7 @@ class PollsAPI(View):
 @view_defaults(route_name='poll')
 class PollAPI(View):
 
-    @view_config(request_method='GET')
-    @json_body(schemas.Poll)
+    @view_config(request_method='GET', permission=PERMISSIONS.READ)
     def get_poll(self):
         return self.ctx.poll
 

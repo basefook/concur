@@ -80,6 +80,7 @@ class Poll(Entity, Base):
     user_id = sa.Column(PUBLIC_ID, sa.ForeignKey(User.id), nullable=False)
     prompt = sa.Column(VARCHAR, nullable=False)
     prompt_tsv = sa.Column(TSVECTOR, nullable=False)
+    is_public = sa.Column(BOOLEAN, default=True)
 
     creator = relationship(User)
 
@@ -88,6 +89,14 @@ class Poll(Entity, Base):
         Entity.__init__(self)
         self.creator = creator
         self.prompt_tsv = sa.func.to_tsvector(self.prompt)
+
+    def __json__(self, request=None):
+        return {
+            'id': self.id,
+            'prompt': self.prompt,
+            'options': self.options,
+            'is_public': self.is_public,
+        }
 
 
 class Option(Entity, Base):
@@ -98,8 +107,6 @@ class Option(Entity, Base):
     text = sa.Column(VARCHAR, nullable=False)
     text_tsv = sa.Column(TSVECTOR, nullable=False)
     tally = sa.Column(INTEGER, default=0)
-    likes = sa.Column(INTEGER, default=0)
-    dislikes = sa.Column(INTEGER, default=0)
 
     creator = relationship(User)
     poll = relationship(Poll, backref='options')
@@ -110,6 +117,12 @@ class Option(Entity, Base):
         self.text_tsv = sa.func.to_tsvector(self.text)
         self.poll = poll
         self.creator = creator
+
+    def __json__(self, request=None):
+        return {
+            'text': self.text,
+            'tally': self.tally,
+        }
 
 
 class Vote(Entity, Base):
@@ -155,6 +168,7 @@ class Grant(Entity, Base):
                 'id': self.id,
                 'access_token': self.access_token,
                 'expires_at': self.expires_at,
+                'type': self.grant_type.lower(),
             })
         return grant_json
 

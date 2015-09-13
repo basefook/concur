@@ -1,20 +1,37 @@
 import sqlalchemy as sa
 
+from pyramid.security import Allow, Deny, Everyone  # noqa
 from concur.db.models import User, Poll, Option, Vote, Grant
+from concur.auth.constants import PERMISSIONS
 
 
-class BaseContext(dict):
+class BaseContext(object):
     def __init__(self, request):
         self.req = request
         self.db = request.db
-        self.on_create()
 
-    def on_create(self):
-        pass
+
+class GrantContext(BaseContext):
+    def __init__(self, request):
+        super(GrantContext, self).__init__(request)
+        grant_id = self.req.matchdict['grant_id']
+        self.grant = self.db.query(Grant)\
+            .filter(Grant.id == grant_id,
+                    Grant.deleted_at == sa.sql.null())\
+            .first()
+        if not self.grant:
+            raise Exception('grant not found')
+
+    def __acl__(self):
+        return [
+            (Allow, self.grant.grantee.id, PERMISSIONS.READ),
+            (Allow, self.grant.grantee.id, PERMISSIONS.DELETE),
+        ]
 
 
 class UserContext(BaseContext):
-    def on_create(self):
+    def __init__(self, request):
+        super(UserContext, self).__init__(request)
         user_id = self.req.matchdict['user_id']
         self.user = self.db.query(User)\
             .filter(User.id == user_id,
@@ -23,18 +40,35 @@ class UserContext(BaseContext):
         if not self.user:
             raise Exception('user not found')
 
+    def __acl__(self):
+        return [
+            (Allow, self.user.group_id, PERMISSIONS.READ),
+            (Allow, self.user.id, PERMISSIONS.READ),
+            (Allow, self.user.id, PERMISSIONS.UPDATE),
+            (Allow, self.user.id, PERMISSIONS.DELETE),
+        ]
+
 
 class PollContext(BaseContext):
-    def on_create(self):
+    def __init__(self, request):
+        super(PollContext, self).__init__(request)
         poll_id = self.req.matchdict['poll_id']
         self.poll = self.db.query(Poll)\
             .filter(Poll.id == poll_id,
                     Poll.deleted_at == sa.sql.null())\
             .first()
 
+    def __acl__(self):
+        return [
+            (Allow, Everyone, PERMISSIONS.READ),
+            (Allow, self.poll.creator.id, PERMISSIONS.UPDATE),
+            (Allow, self.poll.creator.id, PERMISSIONS.DELETE),
+        ]
+
 
 class OptionContext(BaseContext):
-    def on_create(self):
+    def __init__(self, request):
+        super(OptionContext, self).__init__(request)
         poll_id = self.req.matchdict['poll_id']
         option_id = self.req.matchdict['option_id']
         data = self.db.query(Poll, Option)\
@@ -48,9 +82,15 @@ class OptionContext(BaseContext):
         if not self.option:
             raise Exception()
 
+    def __acl__(self):
+        return [
+            (Allow, Everyone, PERMISSIONS.READ),
+        ]
+
 
 class VoteContext(BaseContext):
-    def on_create(self):
+    def __init__(self, request):
+        super(VoteContext, self).__init__(request)
         vote_id = self.req.matchdict['vote_id']
         self.vote = self.db.query(Vote)\
             .filter(Vote.id == vote_id,
@@ -58,13 +98,7 @@ class VoteContext(BaseContext):
             .first()
         self.poll = self.vote.poll
 
-
-class GrantContext(BaseContext):
-    def on_create(self):
-        grant_id = self.req.matchdict['grant_id']
-        self.grant = self.db.query(Grant)\
-            .filter(Grant.id == grant_id,
-                    Grant.deleted_at == sa.sql.null())\
-            .first()
-        if not self.grant:
-            raise Exception('grant not found')
+    def __acl__(self):
+        return [
+            (Allow, self.vote.voter, PERMISSIONS.READ),
+        ]
