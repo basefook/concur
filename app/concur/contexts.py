@@ -11,6 +11,16 @@ class BaseContext(object):
         self.db = request.db
 
 
+class GrantsContext(BaseContext):
+    def __init__(self, request):
+        super(GrantsContext, self).__init__(request)
+        self.grantee = self.db.query(User)\
+            .filter(User.email == self.req.json['email'])\
+            .first()
+        if not self.grantee:
+            raise Exception('unauthorized')
+
+
 class GrantContext(BaseContext):
     def __init__(self, request):
         super(GrantContext, self).__init__(request)
@@ -66,9 +76,26 @@ class PollContext(BaseContext):
         ]
 
 
-class OptionContext(BaseContext):
+class PollOptionsContext(BaseContext):
     def __init__(self, request):
-        super(OptionContext, self).__init__(request)
+        super(PollOptionsContext, self).__init__(request)
+        poll_id = self.req.matchdict['poll_id']
+        self.poll = self.db.query(Poll)\
+            .filter(Poll.id == poll_id, Poll.deleted_at == sa.sql.null())\
+            .first()
+        if not self.poll:
+            raise Exception('poll not found')
+
+    def __acl__(self):
+        return [
+            (Allow, Everyone, PERMISSIONS.READ),
+        ]
+
+
+
+class PollOptionContext(BaseContext):
+    def __init__(self, request):
+        super(PollOptionContext, self).__init__(request)
         poll_id = self.req.matchdict['poll_id']
         option_id = self.req.matchdict['option_id']
         data = self.db.query(Poll, Option)\

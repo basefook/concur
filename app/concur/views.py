@@ -1,31 +1,28 @@
 import sqlalchemy as sa
 
 from concur.lib.view import View, view_config, view_defaults, json_body
-from concur.contexts import UserContext, PollContext, OptionContext, GrantContext, VoteContext
 from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant
-from concur.db.types import UTC_TIMESTAMP
-from concur.constants import SUCCESS
-from concur.auth.constants import PERMISSIONS
 from concur import schemas
 
+from concur.db.types import UTC_TIMESTAMP
+from concur.auth.constants import PERMISSIONS
+from concur.constants import ROLES, SUCCESS
 
+
+# ------------------------------------------------------------------------------
 @view_defaults(route_name='grants')
 class GrantsAPI(View):
 
-    @view_config(request_method='POST')
+    @view_config(request_method='POST', login_required=False)
     def login(self):
-        if self.req.json['type'].upper() == Grant.TYPES.PASSWORD:
+        grant_type = self.req.json['type'].upper()
+        if grant_type == Grant.TYPES.PASSWORD:
             return self.login_with_password_grant()
 
     def login_with_password_grant(self):
-        user = self.db.query(User)\
-            .filter_by(email=self.req.json['email'])\
-            .first()
-        if not user:
-            raise Exception('user not found')
-        if not user.verify_password(self.req.json['password']):
+        if not self.ctx.grantee.verify_password(self.req.json['password']):
             raise Exception('invalid email or password')
-        self.req.session.remember(user)
+        self.req.session.remember(self.ctx.grantee)
         return self.req.session.grant
 
 
@@ -38,11 +35,12 @@ class GrantAPI(View):
         return SUCCESS
 
 
+# ------------------------------------------------------------------------------
 @view_defaults(route_name='users')
 class UsersAPI(View):
 
-    @view_config(request_method='POST')
-    @json_body(schemas.User, role='creator')
+    @view_config(request_method='POST', login_required=False)
+    @json_body(schemas.User, role=ROLES.CREATOR)
     def signup(self):
         user = User(email=self.req.json['email'],
                     password=self.req.json['password'])
@@ -66,44 +64,55 @@ class UserAPI(View):
         return SUCCESS
 
 
+# ------------------------------------------------------------------------------
 @view_defaults(route_name='polls')
 class PollsAPI(View):
 
     @view_config(request_method='POST')
-    @json_body(schemas.Poll, role='creator')
+    @json_body(schemas.Poll, role=ROLES.CREATOR)
     def create_poll(self):
         creator = self.req.session.user
         poll = Poll(creator, prompt=self.req.json['prompt'])
-        options = []
+        poll.options = []
         for o in self.req.json['options']:
-            options.append(Option(creator, poll, text=o['text']))
+            poll.options.append(Option(creator, poll, o['text']))
         self.db.add(poll)
-        self.db.add_all(options)
+        self.db.add_all(poll.options)
         return poll
 
 
 @view_defaults(route_name='poll')
 class PollAPI(View):
 
-    @view_config(request_method='GET', permission=PERMISSIONS.READ)
+    @view_config(request_method='GET',
+                 permission=PERMISSIONS.READ,
+                 login_required=False)
     def get_poll(self):
         return self.ctx.poll
 
 
+# ------------------------------------------------------------------------------
 @view_defaults(route_name='options')
-class OptionsAPI(View):
+class PollOptionsAPI(View):
 
     @view_config(request_method='POST')
-    @json_body(schemas.Option, role='creator')
-    def add_option(self):
+    def add_poll_option(self):
         creator = self.req.session.user
-        option = Option(creator, self.ctx.poll, text=self.req.json['text'])
+        poll = self.ctx.poll
+        text = self.req.json['text']
+        option = Option(creator, poll, text)
         self.db.add(option)
         return option
 
+    @view_config(request_method='GET')
+    def get_poll_options(self):
+        return {
+            'options': self.ctx.poll.options,
+        }
+
 
 @view_defaults(route_name='option')
-class OptionAPI(View):
+class PollOptionAPI(View):
 
     @view_config(request_method='DELETE')
     @json_body(schemas.Poll)
@@ -112,11 +121,12 @@ class OptionAPI(View):
         return SUCCESS
 
 
+# ------------------------------------------------------------------------------
 @view_defaults(route_name='votes')
 class VotesAPI(View):
 
     @view_config(request_method='POST')
-    @json_body(schemas.Vote, role='creator')
+    @json_body(schemas.Vote, role=ROLES.CREATOR)
     def cast_vote(self):
         option_id = self.req.json['option_id']
         voter = self.req.session.user

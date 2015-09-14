@@ -1,8 +1,13 @@
-from pyramid.view import view_config, view_defaults as _view_defaults  # noqa
+from pyramid.view import (
+    view_config as _view_config,
+    view_defaults as _view_defaults
+)
 from jsonschema import (
     ValidationError as JsonValidationError,
     validate as validate_json
 )
+
+from concur.contexts import BaseContext
 
 
 class View(object):
@@ -12,8 +17,24 @@ class View(object):
         self.ctx = context
 
 
-def view_defaults(context=None, *args, **kwargs):
+def login_required_decorator(func):
+    def wrapper(self, *args, **kwargs):
+        if isinstance(self, BaseContext) and self.req.session.new:
+            raise Exception('login required')  # unauthorized
+        return func(self, *args, **kwargs)
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+
+def view_defaults(context=None, login_required=True, *args, **kwargs):
     return _view_defaults(renderer='json', context=context, *args, **kwargs)
+
+
+def view_config(login_required=True, *args, **kwargs):
+    decorators = []
+    if login_required:
+        decorators.append(login_required_decorator)
+    return _view_config(decorator=decorators, *args, **kwargs)
 
 
 class json_body(object):

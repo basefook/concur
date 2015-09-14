@@ -17,6 +17,7 @@ from .types import (
     UTC_TIMESTAMP,
     OAUTH_TOKEN,
     UUID,
+    JSONB,
 )
 
 
@@ -111,12 +112,14 @@ class Option(Entity, Base):
     creator = relationship(User)
     poll = relationship(Poll, backref='options')
 
-    def __init__(self, creator, poll, *args, **kwargs):
+    def __init__(self, creator, poll, text, *args, **kwargs):
         Base.__init__(self, *args, **kwargs)
         Entity.__init__(self)
+        self.text = text
         self.text_tsv = sa.func.to_tsvector(self.text)
         self.poll = poll
         self.creator = creator
+        self.tally = 0
 
     def __json__(self, request=None):
         return {
@@ -164,6 +167,7 @@ class Grant(Entity, Base):
     expires_at = sa.Column(UTC_TIMESTAMP, nullable=False)
     user_agent = sa.Column(VARCHAR)
     ip_addr = sa.Column(VARCHAR)
+    data = sa.Column(JSONB, default={}, server_default='{}')
 
     grantee = relationship(User, backref='grants')
 

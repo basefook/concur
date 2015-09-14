@@ -42,3 +42,9 @@ def cast_vote(app, access_token, option_id):
     }, headers={
         'authorization': 'Bearer {}'.format(access_token)
     })
+
+
+def add_option(app, access_token, poll_id, option):
+    return app.post_json('/polls/{}/options'.format(poll_id), option, headers={
+        'authorization': 'Bearer {}'.format(access_token)
+    })

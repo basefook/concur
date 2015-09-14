@@ -1,9 +1,11 @@
 from concur.renderer import json_renderer
 from concur.contexts import (
+    GrantsContext,
     GrantContext,
     UserContext,
     PollContext,
-    OptionContext,
+    PollOptionContext,
+    PollOptionsContext,
     VoteContext,
 )
 
@@ -11,7 +13,8 @@ from concur.contexts import (
 def includeme(config):
     routes = {
         'grants': {
-            'pattern': '/grants'
+            'pattern': '/grants',
+            'context': GrantsContext,
         },
         'grant': {
             'pattern': '/grants/{grant_id:.+}',
@@ -36,10 +39,11 @@ def includeme(config):
 
         'options': {
             'pattern': '/polls/{poll_id:.+}/options',
+            'context': PollOptionsContext,
         },
         'option': {
             'pattern': '/polls/{poll_id:.+}/options/{option_id:.+}',
-            'context': OptionContext,
+            'context': PollOptionContext,
         },
 
         'votes': {

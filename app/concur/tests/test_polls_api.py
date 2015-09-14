@@ -1,7 +1,7 @@
 import pytest  # noqa
 import jsonschema
 
-from .requests import create_poll, cast_vote
+from .requests import create_poll, cast_vote, add_option
 
 
 flag_create_poll_failed = False
@@ -55,5 +55,22 @@ def test_cast_vote(app, test_context):
                     'id': {'type': 'string'}
                 }
             }
+        }
+    })
+
+
+@pytest.mark.skipif('flag_create_poll_failed')
+def test_add_poll_option(app, test_context):
+    resp = create_poll(app, test_context['grant']['access_token'], "Are you happy?", ["yes", "no"])
+    poll_id = resp.json['id']
+
+    resp = add_option(app, test_context['grant']['access_token'], poll_id, {'text': 'maybe'})
+    assert resp.status_code == 200
+    jsonschema.validate(resp.json, {
+        'type': 'object',
+        'properties': {
+            'id': {'type': 'string'},
+            'text': {'type': 'string'},
+            'tally': {'type': 'integer'},
         }
     })
