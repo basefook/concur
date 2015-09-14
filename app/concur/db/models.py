@@ -45,12 +45,15 @@ class User(Entity, Base):
     email = sa.Column(VARCHAR, index=True, nullable=False)
     password = sa.Column(VARCHAR, nullable=False)
     group_id = sa.Column(UUID, index=True, nullable=False)
+    is_verified = sa.Column(BOOLEAN, default=False, index=True, nullable=False)
+    verification_code = sa.Column(UUID, nullable=False)
 
     def __init__(self, password, *args, **kwargs):
         Base.__init__(self, *args, **kwargs)
         Entity.__init__(self)
         self.group_id = UUID.random()
         self.password = self._bcrypt.encrypt(password.encode('utf-8'))
+        self.verification_code = UUID.random()
 
     def __json__(self, request=None):
         return {

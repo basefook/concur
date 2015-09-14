@@ -1,16 +1,25 @@
+import sqlalchemy as sa  # noqa
+
 from random import choice
 from string import ascii_letters as letters
 
+from concur.db.models import User
 
-def signup(app, email=None, password=None):
+
+def signup(app, db_session, email=None, password=None):
     if not email:
         email = ''.join(choice(letters) for i in range(10)) + '@test.com'
     if not password:
         password = 'test'
-    return app.post_json('/users', {
+    resp = app.post_json('/users', {
         'email': email,
         'password': password,
     })
+    db_session\
+        .query(User)\
+        .filter(User.id == resp.json['id'])\
+        .update({User.is_verified: sa.sql.true()})
+    return resp
 
 
 def login(app, email):

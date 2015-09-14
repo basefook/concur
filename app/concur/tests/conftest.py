@@ -36,6 +36,14 @@ def settings(settings_path):
     return settings
 
 
+@pytest.yield_fixture(scope='function')
+def db_session(app):
+    db_session = quick_sessionmaker()()
+    yield db_session
+    db_session.rollback()
+    db_session.close()
+
+
 @pytest.fixture(scope='session')
 def app(settings_path):
     config_path = 'config:{}'.format(DEV_INI_FNAME)
@@ -45,34 +53,19 @@ def app(settings_path):
     return test_app
 
 
-@pytest.yield_fixture(scope='function')
-def app_db_session(app):
-    db_session = app.registry.DB_Session()
-    yield db_session
-    transaction.abort()
-
-
-@pytest.yield_fixture(scope='function')
-def db_session(app):
-    db_session = quick_sessionmaker()()
-    yield db_session
-    db_session.rollback()
-    db_session.close()
-
-
 @pytest.fixture(scope='function')
 def session_factory(app, db_session):
     return SessionFactory()
 
 
-@pytest.fixture(scope='module')
-def test_context(request):
+@pytest.fixture(scope='function')
+def test_context():
     with scoped_session(quick_sessionmaker()) as db_session:
         email = ''.join(choice(letters) for i in range(10)) + '@test.com'
 
         # use a fixed user id, since this would
         # otherwise change in each test function.
-        user = User(email=email, password='test')
+        user = User(email=email, password='test', is_verified=True)
         user.id = PUBLIC_ID.next_id()
 
         grant = Grant.new_password_grant(user, 'user-agent', '0.0.0.0')

@@ -1,3 +1,5 @@
+import re
+
 from concur.renderer import json_renderer
 from concur.contexts import (
     GrantsContext,
@@ -9,6 +11,21 @@ from concur.contexts import (
     VoteContext,
 )
 
+PATTERNS = {
+    'UUID': r'[a-fA-F0-9]{32}'
+}
+
+
+def pattern(path):
+    crumbs = []
+    for x in path.lstrip('/').split('/'):
+        m = re.match(r'\{(.+):(.+)\}', x)
+        if m:
+            name, regexp_name = m.groups()
+            x = '{' + name + ':' + PATTERNS[regexp_name] + '}'
+        crumbs.append(x)
+    return '/' + '/'.join(crumbs)
+
 
 def includeme(config):
     routes = {
@@ -17,7 +34,7 @@ def includeme(config):
             'context': GrantsContext,
         },
         'grant': {
-            'pattern': '/grants/{grant_id:.+}',
+            'pattern': pattern('/grants/{grant_id:UUID}'),
             'context': GrantContext,
         },
 
@@ -25,24 +42,28 @@ def includeme(config):
             'pattern': '/users'
         },
         'user': {
-            'pattern': '/users/{user_id:.+}',
+            'pattern': pattern('/users/{user_id:UUID}'),
             'context': UserContext,
+        },
+
+        'verify_user': {
+            'pattern': pattern('/users/{user_id:UUID}/verify'),
         },
 
         'polls': {
             'pattern': '/polls',
         },
         'poll': {
-            'pattern': '/polls/{poll_id:.+}',
+            'pattern': pattern('/polls/{poll_id:UUID}'),
             'context': PollContext,
         },
 
-        'options': {
-            'pattern': '/polls/{poll_id:.+}/options',
+        'poll_options': {
+            'pattern': pattern('/polls/{poll_id:UUID}/options'),
             'context': PollOptionsContext,
         },
-        'option': {
-            'pattern': '/polls/{poll_id:.+}/options/{option_id:.+}',
+        'poll_option': {
+            'pattern': pattern('/polls/{poll_id:UUID}/options/{option_id:UUID}'),
             'context': PollOptionContext,
         },
 
@@ -50,7 +71,7 @@ def includeme(config):
             'pattern': '/votes',
         },
         'vote': {
-            'pattern': '/votes/{vote_id:.+}',
+            'pattern': pattern('/votes/{vote_id:UUID}'),
             'context': VoteContext,
         },
     }

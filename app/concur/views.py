@@ -63,6 +63,18 @@ class UserAPI(View):
         self.ctx.user.deleted_at = UTC_TIMESTAMP.now()
         return SUCCESS
 
+    @view_config(route_name='verify_user', request_method='GET',
+                    login_required=False)
+    def verify_user(self):
+        user = self.db.query(User).get(self.req.matchdict['user_id'])
+        if not user:
+            raise Exception('not authorized')
+        code = self.req.GET.get('code')
+        if not (code and (user.verification_code == code)):
+            raise Exception('unauthorized')
+        else:
+            user.is_verified = True
+            return SUCCESS
 
 # ------------------------------------------------------------------------------
 @view_defaults(route_name='polls')
@@ -92,7 +104,7 @@ class PollAPI(View):
 
 
 # ------------------------------------------------------------------------------
-@view_defaults(route_name='options')
+@view_defaults(route_name='poll_options')
 class PollOptionsAPI(View):
 
     @view_config(request_method='POST')
@@ -111,7 +123,7 @@ class PollOptionsAPI(View):
         }
 
 
-@view_defaults(route_name='option')
+@view_defaults(route_name='poll_option')
 class PollOptionAPI(View):
 
     @view_config(request_method='DELETE')

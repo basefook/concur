@@ -89,6 +89,8 @@ class Session(object):
             .filter(Grant.access_token == access_token,
                     Grant.deleted_at == sa.sql.null(),
                     Grant.expires_at > datetime.now(pytz.utc))\
+            .join(User, User.id == Grant.user_id)\
+            .filter(User.is_verified == sa.sql.true())\
             .first()
         if grant is None:
             # NOTE: unauthorized
