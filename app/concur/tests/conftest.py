@@ -58,7 +58,7 @@ def session_factory(app, db_session):
     return SessionFactory()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='module')
 def test_context():
     with scoped_session(quick_sessionmaker()) as db_session:
         email = ''.join(choice(letters) for i in range(10)) + '@test.com'

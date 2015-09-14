@@ -15,10 +15,11 @@ def signup(app, db_session, email=None, password=None):
         'email': email,
         'password': password,
     })
-    db_session\
-        .query(User)\
+    code = db_session\
+        .query(User.verification_code)\
         .filter(User.id == resp.json['id'])\
-        .update({User.is_verified: sa.sql.true()})
+        .scalar()
+    app.get('/users/{}/verify?code={}'.format(resp.json['id'], code))
     return resp
 
 

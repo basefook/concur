@@ -48,6 +48,7 @@ def includeme(config):
 
         'verify_user': {
             'pattern': pattern('/users/{user_id:UUID}/verify'),
+            'context': UserContext,
         },
 
         'polls': {

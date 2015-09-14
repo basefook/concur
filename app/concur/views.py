@@ -64,10 +64,10 @@ class UserAPI(View):
         return SUCCESS
 
     @view_config(route_name='verify_user', request_method='GET',
-                    login_required=False)
+                 login_required=False)
     def verify_user(self):
-        user = self.db.query(User).get(self.req.matchdict['user_id'])
-        if not user:
+        user = self.ctx.user
+        if not user or user.is_verified:
             raise Exception('not authorized')
         code = self.req.GET.get('code')
         if not (code and (user.verification_code == code)):

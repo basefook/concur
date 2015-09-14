@@ -1,6 +1,9 @@
 import sqlalchemy as sa
 import pytest  # noqa
 
+from random import choice
+from string import ascii_letters as letters
+
 from concur.db.models import User, Grant  # noqa
 
 from .requests import login, logout, signup
@@ -23,6 +26,22 @@ def test_signup(app, db_session):
     except:
         flag_signup_failed = True
         raise
+
+
+@pytest.mark.skipif('flag_signup_failed')
+def test_verify_email(app, db_session):
+    email = ''.join(choice(letters) for i in range(10)) + '@test.com'
+    password = 'test'
+    resp = app.post_json('/users', {
+        'email': email,
+        'password': password,
+    })
+    code = db_session\
+        .query(User.verification_code)\
+        .filter(User.id == resp.json['id'])\
+        .scalar()
+    resp = app.get('/users/{}/verify?code={}'.format(resp.json['id'], code))
+    assert resp.json['success']
 
 
 @pytest.mark.skipif('flag_signup_failed')
