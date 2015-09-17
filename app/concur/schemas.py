@@ -1,8 +1,10 @@
 import jsl
 
+from concur.constants import ROLES
+
 
 # common JSL variables
-true_if_creator = jsl.Var({'creator': True})
+true_if_creator = jsl.Var({ROLES.CREATOR: True})
 
 
 class Document(jsl.Document):
