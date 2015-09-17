@@ -1,7 +1,9 @@
+import re
+import hashlib
 import sqlalchemy as sa
 
 from concur.lib.view import View, view_config, view_defaults, json_body
-from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant
+from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant, KeyCounter
 from concur import schemas
 
 from concur.db.types import UTC_TIMESTAMP
@@ -79,18 +81,44 @@ class UserAPI(View):
 # ------------------------------------------------------------------------------
 @view_defaults(route_name='polls')
 class PollsAPI(View):
+    RE_PUNCT = re.compile(r'[^a-z0-9\s]+', re.I)
+    RE_SPACE = re.compile(r'\s+')
 
     @view_config(request_method='POST')
     @json_body(schemas.Poll, role=ROLES.CREATOR)
     def create_poll(self):
         creator = self.req.session.user
-        poll = Poll(creator, prompt=self.req.json['prompt'])
+        prompt = self.req.json['prompt']
+        poll_key = self.create_poll_key(prompt)
+
+        poll = Poll(creator, prompt=prompt, key=poll_key)
+        self.db.add(poll)
+
         poll.options = []
         for o in self.req.json['options']:
             poll.options.append(Option(creator, poll, o['text']))
-        self.db.add(poll)
         self.db.add_all(poll.options)
+
         return poll
+
+    def create_poll_key(self, prompt):
+        i = 1024
+        while i < len(prompt) and not re.PUNCT.match(prompt[i]):
+            i += 1
+        key = self.RE_PUNCT.sub('', prompt.lower())[:i]
+        key = self.RE_SPACE.sub('-', key)
+        key = hashlib.sha1(key.encode('utf-8')).hexdigest()
+        counter = self.db.query(KeyCounter)\
+            .filter(KeyCounter.key == key)\
+            .first()
+        if counter:
+            counter.count += 1
+            idx = counter.count
+        else:
+            counter = KeyCounter(key=key, count=1)
+            self.db.add(counter)
+            idx = 1
+        return '{}-{}'.format(key, idx)
 
 
 @view_defaults(route_name='poll')
@@ -101,7 +129,6 @@ class PollAPI(View):
                  login_required=False)
     def get_poll(self):
         return self.ctx.poll
-
 
 # ------------------------------------------------------------------------------
 @view_defaults(route_name='poll_options')

@@ -78,6 +78,14 @@ class User(Entity, Base):
         return True
 
 
+
+class KeyCounter(Base):
+    __tablename__ = 'key_counters'
+
+    key = sa.Column(VARCHAR, primary_key=True)
+    count = sa.Column(INTEGER, default=1, nullable=False)
+
+
 class Poll(Entity, Base):
     __tablename__ = 'polls'
 
@@ -85,6 +93,7 @@ class Poll(Entity, Base):
     prompt = sa.Column(VARCHAR, nullable=False)
     prompt_tsv = sa.Column(TSVECTOR, nullable=False)
     is_public = sa.Column(BOOLEAN, default=True)
+    key = sa.Column(VARCHAR, nullable=False)
 
     creator = relationship(User)
 
