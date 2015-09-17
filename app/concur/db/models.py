@@ -1,5 +1,7 @@
-import sqlalchemy as sa
+import re
+import hashlib
 import passlib.context
+import sqlalchemy as sa
 
 from datetime import timedelta
 
@@ -84,6 +86,19 @@ class KeyCounter(Base):
 
     key = sa.Column(VARCHAR, primary_key=True)
     count = sa.Column(INTEGER, default=1, nullable=False)
+
+    RE_PUNCT = re.compile(r'[^a-z0-9\s]+', re.I)
+    RE_SPACE = re.compile(r'\s+')
+
+    @classmethod
+    def build_key(cls, text):
+        i = 1024
+        while i < len(text) and not re.PUNCT.match(text[i]):
+            i += 1
+        key = cls.RE_PUNCT.sub('', text.lower())[:i]
+        key = cls.RE_SPACE.sub('-', key)
+        key = hashlib.sha1(key.encode('utf-8')).hexdigest()
+        return key
 
 
 class Poll(Entity, Base):
