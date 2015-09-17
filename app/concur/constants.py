@@ -1,3 +1,3 @@
-DATABASE_URL = 'postgresql+psycopg2://postgres@localhost/concur'
+DATABASE_URL = 'postgresql+psycopg2://http:foo@localhost/concur'
 
 SUCCESS = {'success': True}
