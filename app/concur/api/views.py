@@ -1,7 +1,6 @@
 import sqlalchemy as sa
 
 from concur import schemas
-from concur.lib.view import View, api_config, api_defaults, json_body
 from concur.db.models import (
     User, GroupMembership, Poll, Option,
     Vote, Grant, KeyCounter,
@@ -11,6 +10,7 @@ from concur.db.types import UTC_TIMESTAMP
 from concur.auth.constants import PERMISSIONS
 from concur.constants import ROLES, SUCCESS
 
+from .lib.view import View, api_config, api_defaults, json_body
 from . import exceptions as exc
 
 
