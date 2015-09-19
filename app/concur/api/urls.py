@@ -1,6 +1,5 @@
 import re
 
-from concur.renderer import json_renderer
 from concur.contexts import (
     GrantsContext,
     GrantContext,
@@ -80,5 +79,3 @@ def includeme(config):
     for name, params in routes.items():
         context = params.get('context')
         config.add_route(name, params['pattern'], factory=context)
-
-    config.add_renderer('json', json_renderer())

@@ -2,12 +2,11 @@ from uuid import UUID
 from pyramid.renderers import JSON
 from datetime import datetime, timedelta
 
-from .util import to_timestamp
+from concur.util import to_timestamp
 
 
-__all__ = [
-    'json_renderer',
-]
+def includeme(config):
+    config.add_renderer('json', json_renderer())
 
 
 def json_renderer():

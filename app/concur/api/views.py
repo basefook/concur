@@ -98,7 +98,7 @@ class PollsAPI(View):
         return poll
 
     def create_poll_key(self, prompt):
-        key = KeyCounter.build_key(self.db, prompt)
+        key = KeyCounter.build_key(prompt)
         counter = self.db.query(KeyCounter)\
             .filter(KeyCounter.key == key)\
             .first()

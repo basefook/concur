@@ -7,7 +7,7 @@ def main(global_config, **settings):
     config = Configurator(settings=settings)
     config.include('.db')
     config.include('.auth')
-    config.include('.urls')
+    config.include('.api')
     config.include('.web')
     config.scan()
     return config.make_wsgi_app()
