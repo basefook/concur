@@ -1,15 +1,5 @@
 import re
 
-from concur.contexts import (
-    GrantsContext,
-    GrantContext,
-    UserContext,
-    PollContext,
-    PollOptionContext,
-    PollOptionsContext,
-    VoteContext,
-)
-
 PATTERNS = {
     'UUID': r'[a-fA-F0-9]{32}'
 }
@@ -27,6 +17,17 @@ def pattern(path):
 
 
 def includeme(config):
+    from concur.contexts import (
+        GrantsContext,
+        GrantContext,
+        UserContext,
+        UsersContext,
+        PollContext,
+        PollOptionContext,
+        PollOptionsContext,
+        VoteContext,
+    )
+
     routes = {
         'grants': {
             'pattern': '/grants',
@@ -38,7 +39,8 @@ def includeme(config):
         },
 
         'users': {
-            'pattern': '/users'
+            'pattern': '/users',
+            'context': UsersContext,
         },
         'user': {
             'pattern': pattern('/users/{user_id:UUID}'),

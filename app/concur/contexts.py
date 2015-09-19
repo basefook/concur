@@ -41,6 +41,14 @@ class GrantContext(BaseContext):
         ]
 
 
+class UsersContext(BaseContext):
+    def __init__(self, request):
+        super(UsersContext, self).__init__(request)
+        email = self.req.json['email']
+        password = self.req.json['password']
+        self.user = self.db.query(User).filter(User.email == email).first()
+
+
 class UserContext(BaseContext):
     def __init__(self, request):
         super(UserContext, self).__init__(request)

@@ -60,6 +60,12 @@ def test_logout(app, test_context):
 
 
 @pytest.mark.skipif('flag_signup_failed')
-def test_login_exceptions(app):
+def test_login_exceptions(app, db_session, test_context):
     resp = login(app, 'bad.email@address.com')
     assert resp.status_code == 401
+
+    resp = app.post_json('/users', {
+        'email': test_context['user']['email'],
+        'password': 'test',
+    }, status='*')
+    assert resp.status_code == 409

@@ -14,7 +14,7 @@ def signup(app, db_session, email=None, password=None):
     resp = app.post_json('/users', {
         'email': email,
         'password': password,
-    })
+    }, status='*')
     code = db_session\
         .query(User.verification_code)\
         .filter(User.id == resp.json['id'])\

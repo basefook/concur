@@ -55,10 +55,15 @@ class UsersAPI(View):
     @view_config(request_method='POST', login_required=False)
     @json_body(schemas.User, role=ROLES.CREATOR)
     def signup(self):
+        if self.ctx.user is not None:
+            raise exc.Conflict('email already registered')
+
         user = User(email=self.req.json['email'],
                     password=self.req.json['password'])
+
         # users belong to their own group.
         group_membership = GroupMembership(user, group_id=user.group_id)
+
         self.db.add(user)
         self.db.add(group_membership)
         return user
