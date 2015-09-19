@@ -1,3 +1,4 @@
+import hashlib
 import sqlalchemy as sa
 
 from concur import schemas
@@ -103,9 +104,13 @@ class PollsAPI(View):
     def create_poll(self):
         creator = self.req.session.user
         prompt = self.req.json['prompt']
-        poll_key = self.create_poll_key(prompt)
+        poll_url_path, poll_key = self.create_poll_key(prompt)
 
-        poll = Poll(creator, prompt=prompt, key=poll_key)
+        poll = Poll(creator,
+                    prompt=prompt,
+                    key=poll_key,
+                    web_url_path=poll_url_path)
+
         self.db.add(poll)
 
         poll.options = []
@@ -116,18 +121,20 @@ class PollsAPI(View):
         return poll
 
     def create_poll_key(self, prompt):
-        key = KeyCounter.build_key(prompt)
+        key =  KeyCounter.build_key(prompt)
+        hash_key = hashlib.sha1(key.encode('utf-8')).hexdigest()
         counter = self.db.query(KeyCounter)\
-            .filter(KeyCounter.key == key)\
+            .filter(KeyCounter.key == hash_key)\
             .first()
         if counter:
             counter.count += 1
             idx = counter.count
         else:
-            counter = KeyCounter(key=key, count=1)
+            counter = KeyCounter(key=hash_key, count=1)
             self.db.add(counter)
             idx = 1
-        return '{}-{}'.format(key, idx)
+        url_path = '{}/{}'.format(key, idx)
+        return (url_path, '{}-{}'.format(hash_key, idx))
 
 
 @api_defaults(route_name='poll')

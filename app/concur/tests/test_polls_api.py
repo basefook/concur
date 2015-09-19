@@ -27,6 +27,15 @@ def test_create_and_get_poll(app, test_context):
 
 
 @pytest.mark.skipif('flag_create_poll_failed')
+def test_get_poll_from_static_url(app, test_context):
+    resp = create_poll(app, test_context['grant']['access_token'], "Are you happy?", ["yes", "no"])
+    poll_static_url = resp.json['url']
+
+    resp = app.get(poll_static_url, status='*')
+    assert resp.status_code == 200
+
+
+@pytest.mark.skipif('flag_create_poll_failed')
 def test_cast_vote(app, test_context):
     resp = create_poll(app, test_context['grant']['access_token'], "Are you happy?", ["yes", "no"])
 

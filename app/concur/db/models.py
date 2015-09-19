@@ -97,7 +97,6 @@ class KeyCounter(Base):
             i += 1
         key = cls.RE_PUNCT.sub('', text.lower())[:i]
         key = cls.RE_SPACE.sub('-', key)
-        key = hashlib.sha1(key.encode('utf-8')).hexdigest()
         return key
 
 
@@ -109,6 +108,7 @@ class Poll(Entity, Base):
     prompt_tsv = sa.Column(TSVECTOR, nullable=False)
     is_public = sa.Column(BOOLEAN, default=True)
     key = sa.Column(VARCHAR, nullable=False)
+    web_url_path = sa.Column(VARCHAR, nullable=False)
 
     creator = relationship(User)
 
@@ -124,6 +124,7 @@ class Poll(Entity, Base):
             'prompt': self.prompt,
             'options': self.options,
             'is_public': self.is_public,
+            'url': '/poll/' + self.web_url_path,
         }
 
 
