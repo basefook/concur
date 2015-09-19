@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 
 from concur import schemas
-from concur.lib.view import View, view_config, view_defaults, json_body
+from concur.lib.view import View, api_config, api_defaults, json_body
 from concur.db.models import (
     User, GroupMembership, Poll, Option,
     Vote, Grant, KeyCounter,
@@ -14,7 +14,7 @@ from concur.constants import ROLES, SUCCESS
 from . import exceptions as exc
 
 
-@view_config(context=exc.ApiException)
+@api_config(context=exc.ApiException)
 def on_api_exception(exc_resp, request):
     """ This is what happens when we raise an API exception. ApiExceptions are
         themselves Response objects.
@@ -23,10 +23,10 @@ def on_api_exception(exc_resp, request):
 
 
 # ------------------------------------------------------------------------------
-@view_defaults(route_name='grants')
+@api_defaults(route_name='grants')
 class GrantsAPI(View):
 
-    @view_config(request_method='POST', login_required=False)
+    @api_config(request_method='POST', login_required=False)
     def login(self):
         grant_type = self.req.json['type'].upper()
         if grant_type == Grant.TYPES.PASSWORD:
@@ -39,20 +39,20 @@ class GrantsAPI(View):
         return self.req.session.grant
 
 
-@view_defaults(route_name='grant')
+@api_defaults(route_name='grant')
 class GrantAPI(View):
 
-    @view_config(request_method='DELETE', permission=PERMISSIONS.DELETE)
+    @api_config(request_method='DELETE', permission=PERMISSIONS.DELETE)
     def logout(self):
         self.ctx.grant.deleted_at = UTC_TIMESTAMP.now()
         return SUCCESS
 
 
 # ------------------------------------------------------------------------------
-@view_defaults(route_name='users')
+@api_defaults(route_name='users')
 class UsersAPI(View):
 
-    @view_config(request_method='POST', login_required=False)
+    @api_config(request_method='POST', login_required=False)
     @json_body(schemas.User, role=ROLES.CREATOR)
     def signup(self):
         if self.ctx.user is not None:
@@ -69,19 +69,19 @@ class UsersAPI(View):
         return user
 
 
-@view_defaults(route_name='user')
+@api_defaults(route_name='user')
 class UserAPI(View):
 
-    @view_config(request_method='GET', permission=PERMISSIONS.READ)
+    @api_config(request_method='GET', permission=PERMISSIONS.READ)
     def get_user(self):
         return self.ctx.user
 
-    @view_config(request_method='DELETE', permission=PERMISSIONS.DELETE)
+    @api_config(request_method='DELETE', permission=PERMISSIONS.DELETE)
     def delete_user(self):
         self.ctx.user.deleted_at = UTC_TIMESTAMP.now()
         return SUCCESS
 
-    @view_config(route_name='verify_user', request_method='GET',
+    @api_config(route_name='verify_user', request_method='GET',
                  login_required=False)
     def verify_user(self):
         user = self.ctx.user
@@ -95,10 +95,10 @@ class UserAPI(View):
             return SUCCESS
 
 # ------------------------------------------------------------------------------
-@view_defaults(route_name='polls')
+@api_defaults(route_name='polls')
 class PollsAPI(View):
 
-    @view_config(request_method='POST')
+    @api_config(request_method='POST')
     @json_body(schemas.Poll, role=ROLES.CREATOR)
     def create_poll(self):
         creator = self.req.session.user
@@ -130,20 +130,20 @@ class PollsAPI(View):
         return '{}-{}'.format(key, idx)
 
 
-@view_defaults(route_name='poll')
+@api_defaults(route_name='poll')
 class PollAPI(View):
 
-    @view_config(request_method='GET',
+    @api_config(request_method='GET',
                  permission=PERMISSIONS.READ,
                  login_required=False)
     def get_poll(self):
         return self.ctx.poll
 
 # ------------------------------------------------------------------------------
-@view_defaults(route_name='poll_options')
+@api_defaults(route_name='poll_options')
 class PollOptionsAPI(View):
 
-    @view_config(request_method='POST')
+    @api_config(request_method='POST')
     def add_poll_option(self):
         creator = self.req.session.user
         poll = self.ctx.poll
@@ -152,17 +152,17 @@ class PollOptionsAPI(View):
         self.db.add(option)
         return option
 
-    @view_config(request_method='GET')
+    @api_config(request_method='GET')
     def get_poll_options(self):
         return {
             'options': self.ctx.poll.options,
         }
 
 
-@view_defaults(route_name='poll_option')
+@api_defaults(route_name='poll_option')
 class PollOptionAPI(View):
 
-    @view_config(request_method='DELETE')
+    @api_config(request_method='DELETE')
     @json_body(schemas.Poll)
     def delete_option(self):
         self.ctx.option.deleted_at = UTC_TIMESTAMP.now()
@@ -170,10 +170,10 @@ class PollOptionAPI(View):
 
 
 # ------------------------------------------------------------------------------
-@view_defaults(route_name='votes')
+@api_defaults(route_name='votes')
 class VotesAPI(View):
 
-    @view_config(request_method='POST')
+    @api_config(request_method='POST')
     @json_body(schemas.Vote, role=ROLES.CREATOR)
     def cast_vote(self):
         option_id = self.req.json['option_id']
@@ -194,6 +194,6 @@ class VotesAPI(View):
             return old_vote
 
 
-@view_defaults(route_name='vote')
+@api_defaults(route_name='vote')
 class VoteAPI(View):
     pass

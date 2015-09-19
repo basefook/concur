@@ -1,13 +1,11 @@
-from pyramid.view import (
-    view_config as _view_config,
-    view_defaults as _view_defaults
-)
+from pyramid.view import view_config, view_defaults
 from jsonschema import (
     ValidationError as JsonValidationError,
     validate as validate_json
 )
 
-from concur.contexts import BaseContext
+from concur.api.contexts import BaseContext
+from concur.api import exceptions as exc
 
 
 class View(object):
@@ -20,21 +18,21 @@ class View(object):
 def login_required_decorator(func):
     def wrapper(self, *args, **kwargs):
         if isinstance(self, BaseContext) and self.req.session.new:
-            raise Exception('login required')  # unauthorized
+            raise exc.Unauthorized('login required')  # unauthorized
         return func(self, *args, **kwargs)
     wrapper.__name__ = func.__name__
     return wrapper
 
 
-def view_defaults(context=None, login_required=True, *args, **kwargs):
-    return _view_defaults(renderer='json', context=context, *args, **kwargs)
+def api_defaults(context=None, login_required=True, *args, **kwargs):
+    return view_defaults(renderer='json', context=context, *args, **kwargs)
 
 
-def view_config(login_required=True, *args, **kwargs):
+def api_config(login_required=True, *args, **kwargs):
     decorators = []
     if login_required:
         decorators.append(login_required_decorator)
-    return _view_config(decorator=decorators, *args, **kwargs)
+    return view_config(decorator=decorators, *args, **kwargs)
 
 
 class json_body(object):
@@ -59,9 +57,9 @@ class json_body(object):
                     json_body.memoized_schemas[cache_key] = json_schema
                 validate_json(self.req.json, json_schema)
             except ValueError:
-                raise Exception  # TODO: raise proper API exception
+                raise exc.ValidationError()
             except JsonValidationError:
-                raise Exception  # TODO raise proper API exception
+                raise exc.ValidationError()
             return func(self)
         json_validator.__name__ = func.__name__
         return json_validator

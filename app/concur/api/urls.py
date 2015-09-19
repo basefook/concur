@@ -17,7 +17,7 @@ def pattern(path):
 
 
 def includeme(config):
-    from concur.contexts import (
+    from .contexts import (
         GrantsContext,
         GrantContext,
         UserContext,
