@@ -1,12 +1,25 @@
 import sqlalchemy as sa
 
-from concur.lib.view import View, view_config, view_defaults, json_body
-from concur.db.models import User, GroupMembership, Poll, Option, Vote, Grant, KeyCounter
 from concur import schemas
+from concur.lib.view import View, view_config, view_defaults, json_body
+from concur.db.models import (
+    User, GroupMembership, Poll, Option,
+    Vote, Grant, KeyCounter,
+)
 
 from concur.db.types import UTC_TIMESTAMP
 from concur.auth.constants import PERMISSIONS
 from concur.constants import ROLES, SUCCESS
+
+from . import exceptions as exc
+
+
+@view_config(context=exc.ApiException)
+def on_api_exception(exc_resp, request):
+    """ This is what happens when we raise an API exception. ApiExceptions are
+        themselves Response objects.
+    """
+    return exc_resp
 
 
 # ------------------------------------------------------------------------------
@@ -21,7 +34,7 @@ class GrantsAPI(View):
 
     def login_with_password_grant(self):
         if not self.ctx.grantee.verify_password(self.req.json['password']):
-            raise Exception('invalid email or password')
+            raise exc.Unauthorized('invalid email or password')
         self.req.session.remember(self.ctx.grantee)
         return self.req.session.grant
 
@@ -68,10 +81,10 @@ class UserAPI(View):
     def verify_user(self):
         user = self.ctx.user
         if not user or user.is_verified:
-            raise Exception('not authorized')
+            raise exc.Unauthorized()
         code = self.req.GET.get('code')
         if not (code and (user.verification_code == code)):
-            raise Exception('unauthorized')
+            raise exc.Unauthorized()
         else:
             user.is_verified = True
             return SUCCESS
@@ -166,7 +179,7 @@ class VotesAPI(View):
                                      Vote.user_id == voter.id))\
             .first()
         if not data:
-            raise Exception('poll not found')
+            raise exc.NotFound('poll not found')
         option, old_vote = data
         if (not old_vote) or (old_vote.option_id != option_id):
             new_vote = Vote(voter, option)

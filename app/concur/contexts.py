@@ -4,6 +4,8 @@ from pyramid.security import Allow, Deny, Everyone  # noqa
 from concur.db.models import User, Poll, Option, Vote, Grant
 from concur.auth.constants import PERMISSIONS
 
+from concur.api import exceptions as exc
+
 
 class BaseContext(object):
     def __init__(self, request):
@@ -18,7 +20,7 @@ class GrantsContext(BaseContext):
             .filter(User.email == self.req.json['email'])\
             .first()
         if not self.grantee:
-            raise Exception('unauthorized')
+            raise exc.Unauthorized()
 
 
 class GrantContext(BaseContext):
@@ -30,7 +32,7 @@ class GrantContext(BaseContext):
                     Grant.deleted_at == sa.sql.null())\
             .first()
         if not self.grant:
-            raise Exception('grant not found')
+            raise exc.NotFound('grant not found')
 
     def __acl__(self):
         return [
@@ -48,7 +50,7 @@ class UserContext(BaseContext):
                     User.deleted_at == sa.sql.null())\
             .first()
         if not self.user:
-            raise Exception('user not found')
+            raise exc.NotFound('user not found')
 
     def __acl__(self):
         return [
@@ -84,7 +86,7 @@ class PollOptionsContext(BaseContext):
             .filter(Poll.id == poll_id, Poll.deleted_at == sa.sql.null())\
             .first()
         if not self.poll:
-            raise Exception('poll not found')
+            raise exc.NotFound('poll not found')
 
     def __acl__(self):
         return [
@@ -103,11 +105,11 @@ class PollOptionContext(BaseContext):
                     Poll.deleted_at == sa.sql.null())\
             .outerjoin(Option, Option.id == option_id)
         if not data:
-            raise Exception()
+            raise exc.NotFound('poll not found')
         self.poll = data[0]
         self.option = data[1]
         if not self.option:
-            raise Exception()
+            raise exc.NotFound('poll options not found')
 
     def __acl__(self):
         return [

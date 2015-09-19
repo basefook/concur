@@ -1,4 +1,3 @@
-import sqlalchemy as sa
 import pytest  # noqa
 
 from random import choice
@@ -58,3 +57,9 @@ def test_logout(app, test_context):
                   test_context['grant']['access_token'],
                   test_context['grant']['id'])
     assert resp.status_code == 200
+
+
+@pytest.mark.skipif('flag_signup_failed')
+def test_login_exceptions(app):
+    resp = login(app, 'bad.email@address.com')
+    assert resp.status_code == 401

@@ -11,6 +11,7 @@ from pyramid.interfaces import ISession, ISessionFactory
 
 from concur.db.models import User, Grant, GroupMembership
 from concur.constants import RE_BEARER_AUTH_HEADER
+from concur.api import exceptions as exc
 
 
 class LRU_Cache(object):
@@ -78,8 +79,7 @@ class Session(object):
             if match:
                 return match.groups()[0]
             else:
-                # NOTE: unauthorized
-                raise Exception('The provided access token is invalid.')
+                raise exc.Unauthorized('invalid access token')
         return None
 
     @classmethod
@@ -93,8 +93,7 @@ class Session(object):
             .filter(User.is_verified == sa.sql.true())\
             .first()
         if grant is None:
-            # NOTE: unauthorized
-            raise Exception('The provided access token is invalid.')
+            raise exc.Unauthorized('invalid access token')
         return grant
 
     def __init__(self, req):
@@ -127,7 +126,7 @@ class Session(object):
             self.req.db.add(self.grant)
         else:
             # cannot reassigned the grant
-            raise Exception('Cannot reassign access token.')
+            raise exc.Forbidden()
 
     def invalidate(self):
         if self.new:
