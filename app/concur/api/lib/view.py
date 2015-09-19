@@ -1,3 +1,5 @@
+import logging
+
 from pyramid.view import view_config, view_defaults
 from jsonschema import (
     ValidationError as JsonValidationError,
@@ -9,7 +11,10 @@ from concur.api import exceptions as exc
 
 
 class View(object):
+    log_name = 'view'
+
     def __init__(self, context, request):
+        self.log = logging.getLogger(self.log_name)
         self.req = request
         self.db = request.db
         self.ctx = context

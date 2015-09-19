@@ -1,3 +1,4 @@
+import logging
 import sqlalchemy as sa
 
 from pyramid.security import Allow, Deny, Everyone  # noqa
@@ -8,7 +9,10 @@ from concur.api import exceptions as exc
 
 
 class BaseContext(object):
+    log_name = 'context'
+
     def __init__(self, request):
+        self.log = logging.getLogger(self.log_name)
         self.req = request
         self.db = request.db
 
@@ -45,7 +49,6 @@ class UsersContext(BaseContext):
     def __init__(self, request):
         super(UsersContext, self).__init__(request)
         email = self.req.json['email']
-        password = self.req.json['password']
         self.user = self.db.query(User).filter(User.email == email).first()
 
 
